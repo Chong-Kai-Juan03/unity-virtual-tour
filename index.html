@@ -58,79 +58,47 @@
     <!-- Firebase compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-    <!-- Optional: App Check (recommended) -->
+    <!-- Optional: App Check -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check-compat.js"></script>
 
-    <!-- Load config that will be created at deploy time -->
+    <!-- Config generated at deploy-time -->
     <script src="firebase-config.js"></script>
-
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-
-            // 1) Read config injected by GitHub Actions
+            // ---- Firebase init from injected config ----
             const cfg = (window && window.FIREBASE_CONFIG) || null;
             if (!cfg) {
-                console.error('Missing Firebase config. Did deploy pipeline create firebase-config.js?');
+                console.error('Missing Firebase config. Did deploy create firebase-config.js?');
             } else {
                 try {
                     firebase.initializeApp(cfg);
                     console.log('Firebase initialized');
-
-                    // 2) (Optional) App Check — only activates if a site key is provided
                     if (window.APP_CHECK_SITE_KEY) {
-                        firebase.appCheck().activate(window.APP_CHECK_SITE_KEY, /* isTokenAutoRefreshEnabled */ true);
+                        firebase.appCheck().activate(window.APP_CHECK_SITE_KEY, true);
                         console.log('App Check activated');
                     }
-                } catch (e) {
-                    console.error('Firebase init error:', e);
-                }
+                } catch (e) { console.error('Firebase init error:', e); }
             }
 
-            //// ---------- Firebase config (new) ----------
-            //const firebaseConfig = {
-            //    apiKey: "AIzaSyDOllT7M3GPlJPpEWnPSweaEXMPmNJO3WY",
-            //    authDomain: "intipenangvr.firebaseapp.com",
-            //    databaseURL: "https://intipenangvr-default-rtdb.asia-southeast1.firebasedatabase.app",
-            //    projectId: "intipenangvr",
-            //    storageBucket: "intipenangvr.firebasestorage.app",
-            //    messagingSenderId: "765888370139",
-            //    appId: "1:765888370139:web:9f1f56d23b3604d5b683fe",
-            //    measurementId: "G-24SCP364RP"
-            //};
-
-            //try {
-            //    firebase.initializeApp(firebaseConfig);
-            //    console.log("Firebase initialized successfully");
-            //} catch (error) {
-            //    console.error("Firebase initialization error:", error);
-            //}
-
-            // If a building has no levels, use this value
             const LEVEL_FOR_BUILDINGS_WITHOUT_LEVELS = "N/A";
 
-            // [{ Id, SceneTitle, S3Key, ImageUrl, Building, Level }, ...]
             function normalizeScenes(root) {
                 const out = [];
                 if (!root || typeof root !== "object") return out;
-
                 for (const building of Object.keys(root)) {
                     const bObj = root[building];
                     if (!bObj || typeof bObj !== "object") continue;
-
                     const childKeys = Object.keys(bObj);
                     if (childKeys.length === 0) continue;
-
                     const firstChild = bObj[childKeys[0]];
                     const hasLevels = firstChild && typeof firstChild === "object" &&
                         !("SceneTitle" in firstChild) && !("ImageUrl" in firstChild);
 
                     if (hasLevels) {
-                        // Buildings with levels (e.g., Inti-Penang)
                         for (const levelName of childKeys) {
                             const levelObj = bObj[levelName];
                             if (!levelObj || typeof levelObj !== "object") continue;
-
                             for (const itemKey of Object.keys(levelObj)) {
                                 const item = levelObj[itemKey] || {};
                                 const t = item.SceneTitle, k = item.S3Key, u = item.ImageUrl;
@@ -147,7 +115,6 @@
                             }
                         }
                     } else {
-                        // Buildings without levels (e.g., USAINS)
                         for (const itemKey of childKeys) {
                             const item = bObj[itemKey] || {};
                             const t = item.SceneTitle, k = item.S3Key, u = item.ImageUrl;
@@ -164,14 +131,10 @@
                         }
                     }
                 }
-
-                // Optional: sort
                 out.sort((a, b) =>
                     (a.Building || "").localeCompare(b.Building || "") ||
                     (a.Level || "").localeCompare(b.Level || "") ||
-                    (a.SceneTitle || "").localeCompare(b.SceneTitle || "")
-                );
-
+                    (a.SceneTitle || "").localeCompare(b.SceneTitle || ""));
                 console.log("[index] Flattened scenes:", out);
                 return out;
             }
@@ -180,7 +143,7 @@
                 try {
                     const snap = await firebase.database().ref("Scenes").get();
                     if (!snap.exists()) {
-                        console.warn("No data found at 'Scenes' reference");
+                        console.warn("No data found at 'Scenes'");
                         return [];
                     }
                     return normalizeScenes(snap.val());
@@ -190,15 +153,12 @@
                 }
             }
 
-            // Send to Unity
             function sendScenesToUnity(unityInstance, scenesArray) {
                 try {
                     const payload = JSON.stringify(scenesArray);
                     console.log("[index] Sending payload to Unity:", payload);
                     unityInstance.SendMessage("FirebaseBridge", "OnPreloadDataReceived", payload);
-                } catch (err) {
-                    console.error("[index] SendMessage failed:", err);
-                }
+                } catch (err) { console.error("[index] SendMessage failed:", err); }
             }
 
             var container = document.querySelector("#unity-container");
@@ -226,20 +186,23 @@
                 updateBannerVisibility();
             }
 
+            // -------- Unity loader config (unityweb files + fallback) --------
             var buildUrl = "Build";
-            var loaderUrl = buildUrl + "/output.loader.js";
+            var loaderUrl = buildUrl + "/newbuild.loader.js?v=5"; // bump v on each rebuild
+
             var config = {
-                dataUrl: buildUrl + "/output.data.gz",
-                frameworkUrl: buildUrl + "/output.framework.js.gz",
-                codeUrl: buildUrl + "/output.wasm.gz",
+                dataUrl: buildUrl + "/newbuild.data.unityweb",
+                frameworkUrl: buildUrl + "/newbuild.framework.js.unityweb",
+                codeUrl: buildUrl + "/newbuild.wasm.unityweb",
                 streamingAssetsUrl: "StreamingAssets",
                 companyName: "INTI College",
                 productName: "INTI Virtual Tour",
                 productVersion: "1.0",
                 devicePixelRatio: Math.min(1.5, window.devicePixelRatio || 1),
+                decompressionFallback: true
             };
 
-            // Mobile meta + classes
+            // Mobile tuning
             if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
                 var meta = document.createElement('meta');
                 meta.name = 'viewport';
@@ -259,19 +222,10 @@
                     progressBarFull.style.width = (100 * progress) + "%";
                 }).then((unityInstance) => {
                     loadingBar.style.display = "none";
-                    if (fullscreenButton) {
-                        fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
-                    }
+                    if (fullscreenButton) fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
 
-                    fetchScenesArray().then(scenes => {
-                        sendScenesToUnity(unityInstance, scenes);
-                    });
-
-                    window.addEventListener("resize", () => {
-                    });
-                }).catch((message) => {
-                    alert(message);
-                });
+                    fetchScenesArray().then(scenes => sendScenesToUnity(unityInstance, scenes));
+                }).catch((message) => { alert(message); });
             };
             document.body.appendChild(script);
         });
