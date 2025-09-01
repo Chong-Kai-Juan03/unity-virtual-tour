@@ -9,35 +9,52 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: true   # IMPORTANT for your large LFS files
+          lfs: true  # fetch large LFS files (your .data/.wasm)
 
-      # Copy the site from repo ROOT (your index.html sits next to Build/)
+      # Copy your site from REPO ROOT (index.html sits next to Build/)
       - name: Prepare site folder
         run: |
           mkdir -p site
           cp -R index.html Build StreamingAssets TemplateData site/ 2>/dev/null || true
 
-      # Inject firebase-config.js from repo secrets
-      - name: Create firebase-config.js from secrets
+      # Create firebase-config.js from Secrets (or Variables if you used those)
+      - name: Create firebase-config.js from secrets/vars
+        env:
+          FB_API_KEY:               ${{ secrets.FB_API_KEY               || vars.FB_API_KEY }}
+          FB_AUTH_DOMAIN:           ${{ secrets.FB_AUTH_DOMAIN           || vars.FB_AUTH_DOMAIN }}
+          FB_DATABASE_URL:          ${{ secrets.FB_DATABASE_URL          || vars.FB_DATABASE_URL }}
+          FB_PROJECT_ID:            ${{ secrets.FB_PROJECT_ID            || vars.FB_PROJECT_ID }}
+          FB_STORAGE_BUCKET:        ${{ secrets.FB_STORAGE_BUCKET        || vars.FB_STORAGE_BUCKET }}
+          FB_MESSAGING_SENDER_ID:   ${{ secrets.FB_MESSAGING_SENDER_ID   || vars.FB_MESSAGING_SENDER_ID }}
+          FB_APP_ID:                ${{ secrets.FB_APP_ID                || vars.FB_APP_ID }}
+          FB_APPCHECK_SITE_KEY:     ${{ secrets.FB_APPCHECK_SITE_KEY     || vars.FB_APPCHECK_SITE_KEY }}
         run: |
-          cat > site/firebase-config.js << 'EOF'
+          cat > site/firebase-config.js <<EOF
           window.FIREBASE_CONFIG = {
-            apiKey: "${{ secrets.FB_API_KEY }}",
-            authDomain: "${{ secrets.FB_AUTH_DOMAIN }}",
-            databaseURL: "${{ secrets.FB_DATABASE_URL }}",
-            projectId: "${{ secrets.FB_PROJECT_ID }}",
-            storageBucket: "${{ secrets.FB_STORAGE_BUCKET }}",
-            messagingSenderId: "${{ secrets.FB_MESSAGING_SENDER_ID }}",
-            appId: "${{ secrets.FB_APP_ID }}"
+            apiKey: "${FB_API_KEY}",
+            authDomain: "${FB_AUTH_DOMAIN}",
+            databaseURL: "${FB_DATABASE_URL}",
+            projectId: "${FB_PROJECT_ID}",
+            storageBucket: "${FB_STORAGE_BUCKET}",
+            messagingSenderId: "${FB_MESSAGING_SENDER_ID}",
+            appId: "${FB_APP_ID}"
           };
-          window.APP_CHECK_SITE_KEY = "${{ secrets.FB_APPCHECK_SITE_KEY }}";
+          window.APP_CHECK_SITE_KEY = "${FB_APPCHECK_SITE_KEY}";
           EOF
+
+      # Ensure the deploy carries your custom domain
+      - name: Add CNAME for custom domain
+        run: echo "www.intipenang-vr-tour.com" > site/CNAME
 
       - uses: actions/upload-pages-artifact@v3
         with:
