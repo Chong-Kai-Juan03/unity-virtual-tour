@@ -7,30 +7,27 @@
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
     <style>
-        /* White page, no gaps */
+        /* White page and container so there's never a black backdrop */
         html, body {
             height: 100%;
             margin: 0;
             background: #ffffff;
         }
-        /* Full-bleed container & canvas */
+
         #unity-container {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
+            position: relative;
+            min-height: 100vh;
             background: #ffffff;
         }
 
+        /* Canvas: transparent so the page background shows while loading */
         #unity-canvas {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
             background: transparent !important;
             outline: none;
+            display: block;
         }
 
-        /* Make the default Unity loader visible and centered, above canvas */
+        /* Center the loader above the canvas with a high z-index */
         #unity-loading-bar {
             position: fixed;
             inset: 0;
@@ -38,9 +35,9 @@
             align-items: center;
             justify-content: center;
             z-index: 9999;
-            pointer-events: none; /* don’t block clicks once app is ready */
+            pointer-events: none;
         }
-        /* Optional: give the bar some styling if your TemplateData CSS is minimal */
+        /* Simple, always-visible progress bar (independent of TemplateData images) */
         #unity-progress-bar-empty {
             width: min(420px, 80vw);
             height: 10px;
@@ -56,8 +53,8 @@
             transition: width .12s linear;
         }
 
-        /* Keep footer/warning positioned */
-        #unity-footer, #unity-warning {
+        /* Keep footer/warnings positioned like the template expects */
+        #unity-warning, #unity-footer {
             position: absolute;
             left: 0;
             right: 0;
@@ -67,7 +64,7 @@
 </head>
 <body>
     <div id="unity-container" class="unity-desktop">
-        <canvas id="unity-canvas" tabindex="-1"></canvas>
+        <canvas id="unity-canvas" width="1400" height="880" tabindex="-1"></canvas>
         <div id="unity-loading-bar">
             <div id="unity-logo"></div>
             <div id="unity-progress-bar-empty">
@@ -163,13 +160,18 @@
             const warningBanner = document.querySelector("#unity-warning");
 
             function unityShowBanner(msg, type) {
-                function update() { warningBanner.style.display = warningBanner.children.length ? 'block' : 'none'; }
-                const div = document.createElement('div');
+                function updateBannerVisibility() {
+                    warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+                }
+                var div = document.createElement('div');
                 div.innerHTML = msg;
-                div.style = 'background:' + (type === 'error' ? '#ff4d4f' : '#fff3cd') + '; padding:10px;';
                 warningBanner.appendChild(div);
-                if (type !== 'error') setTimeout(() => { warningBanner.removeChild(div); update(); }, 5000);
-                update();
+                if (type == 'error') div.style = 'background: red; padding: 10px;';
+                else {
+                    if (type == 'warning') div.style = 'background: #fff3cd; padding: 10px;';
+                    setTimeout(function () { warningBanner.removeChild(div); updateBannerVisibility(); }, 5000);
+                }
+                updateBannerVisibility();
             }
 
             // Mobile viewport
@@ -206,7 +208,8 @@
             loadingBar.style.display = "flex";
 
             // Start fetching Firebase data in parallel (so the loader animates right away)
-            const scenesPromise = fetchScenesArray();
+            const firebasePromise = fetchScenesArray()
+                .then(arr => { console.log("[firebase] scenes fetched:", arr.length); return arr; });
 
             // Load Unity
             const script = document.createElement("script");
@@ -215,21 +218,37 @@
                 createUnityInstance(canvas, config, (progress) => {
                     progressBarFull.style.width = (100 * progress) + "%";
                 }).then(async (unityInstance) => {
-                    if (fullscreenButton) fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
 
-                    // Send Firebase scenes when ready
-                    const scenes = await scenesPromise.catch(() => []);
-                    sendScenesToUnity(unityInstance, scenes);
+                    // Fullscreen button
+                    if (fullscreenButton) fullscreenButton.onclick = () => { unityInstance.SetFullscreen(1); };
 
-                    // Hide loader when Unity is ready
+                    // Deliver Firebase data once both are ready (with small retry in case GO not ready)
+                    const scenes = await firebasePromise;
+                    const payload = JSON.stringify(scenes || []);
+                    let delivered = false;
+                    for (let i = 0; i < 20; i++) { // retry ~10s total
+                        try {
+                            unityInstance.SendMessage("FirebaseBridge", "OnPreloadDataReceived", payload);
+                            delivered = true;
+                            console.log("[index] scenes payload delivered to Unity");
+                            break;
+                        } catch (e) {
+                            await new Promise(r => setTimeout(r, 500));
+                        }
+                    }
+                    if (!delivered) {
+                        console.warn("[index] Could not deliver scenes to FirebaseBridge after retries.");
+                    }
+
+                    // Hide loader only when Unity is ready
                     loadingBar.style.display = "none";
+
                 }).catch((message) => {
                     loadingBar.style.display = "none";
                     alert(message);
                 });
             };
             document.body.appendChild(script);
-        });
     </script>
 </body>
 </html>
