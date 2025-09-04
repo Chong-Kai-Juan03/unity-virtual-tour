@@ -6,37 +6,6 @@
     <title>Unity WebGL Player | INTI International College Penang</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        #unity-container {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #000;
-        }
-
-        #unity-canvas {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
-            outline: none;
-            background: #000;
-        }
-
-        #unity-loading-bar, #unity-footer, #unity-warning {
-            position: absolute;
-            left: 0;
-            right: 0;
-            pointer-events: none;
-        }
-    </style>
 </head>
 <body>
     <div id="unity-container" class="unity-desktop">
@@ -207,10 +176,13 @@
                 var meta = document.createElement('meta');
                 meta.name = 'viewport';
                 meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-                document.head.appendChild(meta);
+                document.getElementsByTagName('head')[0].appendChild(meta);
                 container.className = "unity-mobile";
                 canvas.className = "unity-mobile";
-                config.devicePixelRatio = 1;
+                // config.devicePixelRatio = 1; // uncomment to reduce res on mobile
+            } else {
+                canvas.style.width = "1400px";
+                canvas.style.height = "880px";
             }
 
             loadingBar.style.display = "block";
