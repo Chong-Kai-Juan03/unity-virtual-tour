@@ -63,26 +63,9 @@
 
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-
-            //// 1) Read config injected by GitHub Actions
-            const cfg = (window && window.FIREBASE_CONFIG) || null;
-            if (!cfg) {
-                console.error('Missing Firebase config. Did deploy pipeline create firebase-config.js?');
-            } else {
-                try {
-                    firebase.initializeApp(cfg);
-                    console.log('Firebase initialized');
-
-                    // 2) (Optional) App Check — only activates if a site key is provided
-                    if (window.APP_CHECK_SITE_KEY) {
-                        firebase.appCheck().activate(window.APP_CHECK_SITE_KEY, /* isTokenAutoRefreshEnabled */ true);
-                        console.log('App Check activated');
-                    }
-                } catch (e) {
-                    console.error('Firebase init error:', e);
-                }
-            }
+          document.addEventListener('DOMContentLoaded', function () {
+              // your normal Unity initialization and Firebase reads go here
+          });
 
 
             // If a building has no levels, use this value
