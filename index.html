@@ -59,41 +59,41 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="./firebase-config.js"></script>
-
-    <!-- Unity Loader must be loaded BEFORE we call createUnityInstance -->
+    
+    <!-- Load Unity loader BEFORE calling createUnityInstance -->
     <script src="./Build/unity-virtual-tour.loader.js"></script>
-
+    
     <script>
-    document.addEventListener('DOMContentLoaded', async function () {
+    window.addEventListener('load', async function () {
         console.log("Page loaded, initializing Unity and Firebase...");
-
-        // --- Firebase should already be initialized from firebase-config.js ---
-
+    
+        // -------- Firebase already initialized from firebase-config.js -------- //
+    
         // If a building has no levels, use this value
         const LEVEL_FOR_BUILDINGS_WITHOUT_LEVELS = "N/A";
-
-        // [{ Id, SceneTitle, S3Key, ImageUrl, Building, Level }, ...]
+    
+        // Flatten and normalize Firebase data
         function normalizeScenes(root) {
             const out = [];
             if (!root || typeof root !== "object") return out;
-
+    
             for (const building of Object.keys(root)) {
                 const bObj = root[building];
                 if (!bObj || typeof bObj !== "object") continue;
-
+    
                 const childKeys = Object.keys(bObj);
                 if (childKeys.length === 0) continue;
-
+    
                 const firstChild = bObj[childKeys[0]];
                 const hasLevels = firstChild && typeof firstChild === "object" &&
                     !("SceneTitle" in firstChild) && !("ImageUrl" in firstChild);
-
+    
                 if (hasLevels) {
-                    // Buildings with levels (e.g., Inti-Penang)
+                    // Buildings with levels
                     for (const levelName of childKeys) {
                         const levelObj = bObj[levelName];
                         if (!levelObj || typeof levelObj !== "object") continue;
-
+    
                         for (const itemKey of Object.keys(levelObj)) {
                             const item = levelObj[itemKey] || {};
                             const t = item.SceneTitle, k = item.S3Key, u = item.ImageUrl;
@@ -110,7 +110,7 @@
                         }
                     }
                 } else {
-                    // Buildings without levels (e.g., USAINS)
+                    // Buildings without levels
                     for (const itemKey of childKeys) {
                         const item = bObj[itemKey] || {};
                         const t = item.SceneTitle, k = item.S3Key, u = item.ImageUrl;
@@ -127,17 +127,17 @@
                     }
                 }
             }
-
+    
             out.sort((a, b) =>
                 (a.Building || "").localeCompare(b.Building || "") ||
                 (a.Level || "").localeCompare(b.Level || "") ||
                 (a.SceneTitle || "").localeCompare(b.SceneTitle || "")
             );
-
+    
             console.log("[index] Flattened scenes:", out);
             return out;
         }
-
+    
         async function fetchScenesArray() {
             try {
                 const snap = await firebase.database().ref("Scenes").get();
@@ -151,7 +151,7 @@
                 return [];
             }
         }
-
+    
         function sendScenesToUnity(unityInstance, scenesArray) {
             try {
                 const payload = JSON.stringify(scenesArray);
@@ -161,15 +161,15 @@
                 console.error("[index] SendMessage failed:", err);
             }
         }
-
-        // --- Unity UI setup ---
+    
+        // -------- Unity Setup -------- //
         const container = document.querySelector("#unity-container");
         const canvas = document.querySelector("#unity-canvas");
         const loadingBar = document.querySelector("#unity-loading-bar");
         const progressBarFull = document.querySelector("#unity-progress-bar-full");
         const fullscreenButton = document.querySelector("#unity-fullscreen-button");
         const warningBanner = document.querySelector("#unity-warning");
-
+    
         function unityShowBanner(msg, type) {
             function updateBannerVisibility() {
                 warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -187,8 +187,8 @@
             }
             updateBannerVisibility();
         }
-
-        // --- Unity Config ---
+    
+        // Unity build configuration
         const config = {
             dataUrl: "./Build/unity-virtual-tour.data",
             frameworkUrl: "./Build/unity-virtual-tour.framework.js",
@@ -199,8 +199,8 @@
             productVersion: "0.1",
             showBanner: unityShowBanner
         };
-
-        // Handle mobile scaling
+    
+        // Adjust for mobile
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
             const meta = document.createElement('meta');
             meta.name = 'viewport';
@@ -210,11 +210,17 @@
             canvas.className = "unity-mobile";
             config.devicePixelRatio = 1;
         }
-
+    
         loadingBar.style.display = "block";
-
-        // Wait a short moment to ensure loader registered createUnityInstance
-        setTimeout(() => {
+    
+        // -------- Ensure loader is ready before calling Unity -------- //
+        if (typeof createUnityInstance !== "function") {
+            console.warn("Unity loader not ready yet, waiting...");
+            await new Promise(resolve => setTimeout(resolve, 500)); // short delay
+        }
+    
+        if (typeof createUnityInstance === "function") {
+            console.log("Unity loader ready, creating instance...");
             createUnityInstance(canvas, config, (progress) => {
                 progressBarFull.style.width = (100 * progress) + "%";
             }).then((unityInstance) => {
@@ -222,16 +228,19 @@
                 if (fullscreenButton) {
                     fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
                 }
-
+    
                 fetchScenesArray().then((scenes) => {
                     sendScenesToUnity(unityInstance, scenes);
                 });
             }).catch((message) => {
                 console.error("Unity failed to start:", message);
             });
-        }, 300); // small delay to let loader define the function
+        } else {
+            console.error("createUnityInstance still undefined — loader may not have loaded correctly.");
+        }
     });
     </script>
+
 
 </body>
 </html>
