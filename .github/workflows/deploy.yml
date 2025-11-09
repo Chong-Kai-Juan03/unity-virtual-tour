@@ -20,11 +20,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 👉 Create firebase-config.js from GitHub secrets
+      # ✅ Generate firebase-config.js dynamically from GitHub secrets
       - name: Generate firebase-config.js
         run: |
-          mkdir -p ./firebase
-          cat > ./firebase-config.js <<EOF
+          echo "Creating firebase-config.js..."
+          cat > firebase-config.js <<EOF
           const firebaseConfig = {
             apiKey: "${{ secrets.FB_API_KEY }}",
             authDomain: "${{ secrets.FB_AUTH_DOMAIN }}",
@@ -36,16 +36,16 @@ jobs:
           };
           firebase.initializeApp(firebaseConfig);
           EOF
-
-          mv firebase-config.js ./  # move it beside index.html
           echo "firebase-config.js created successfully."
 
-      # Upload all site files (including new firebase-config.js)
+      # Upload artifacts for GitHub Pages
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
+      # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
