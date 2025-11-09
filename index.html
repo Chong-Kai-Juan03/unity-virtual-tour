@@ -188,18 +188,19 @@
                 updateBannerVisibility();
             }
 
-            var buildUrl = "Build";
-            var loaderUrl = buildUrl + "/unity-virtual-tour.loader.js";
-            var config = {
-                dataUrl: buildUrl + "/unity-virtual-tour.data",
-                frameworkUrl: buildUrl + "/unity-virtual-tour.framework.js",
-                codeUrl: buildUrl + "/unity-virtual-tour.wasm",
-                streamingAssetsUrl: "StreamingAssets",
-                companyName: "INTI International College Penang ",
-                productName: "INTI International College Penang",
-                productVersion: "0.1",
-                showBanner: unityShowBanner,
-            };
+            <script src="./Build/unity-virtual-tour.loader.js"></script>
+            <script>
+              createUnityInstance(document.querySelector("#unity-canvas"), {
+                  dataUrl: "./Build/unity-virtual-tour.data",
+                  frameworkUrl: "./Build/unity-virtual-tour.framework.js",
+                  codeUrl: "./Build/unity-virtual-tour.wasm",
+                  streamingAssetsUrl: "StreamingAssets",
+                  companyName: "INTI International College Penang",
+                  productName: "INTI Virtual Tour",
+                  productVersion: "0.1"
+              });
+            </script>
+
 
 
             // Mobile meta + classes
