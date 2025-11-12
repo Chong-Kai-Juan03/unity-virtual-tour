@@ -20,12 +20,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ✅ Generate firebase-config.js dynamically from GitHub secrets
+      # Generate firebase-config.js dynamically from GitHub secrets
       - name: Generate firebase-config.js
         run: |
           echo "Creating firebase-config.js..."
           cat > firebase-config.js <<EOF
-          const firebaseConfig = {
+          const cfg = {
             apiKey: "${{ secrets.FB_API_KEY }}",
             authDomain: "${{ secrets.FB_AUTH_DOMAIN }}",
             databaseURL: "${{ secrets.FB_DATABASE_URL }}",
@@ -34,7 +34,7 @@ jobs:
             messagingSenderId: "${{ secrets.FB_MESSAGING_SENDER_ID }}",
             appId: "${{ secrets.FB_APP_ID }}"
           };
-          firebase.initializeApp(firebaseConfig);
+          firebase.initializeApp(cfg);
           EOF
           echo "firebase-config.js created successfully."
 
