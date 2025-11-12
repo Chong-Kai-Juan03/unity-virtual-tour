@@ -1,9 +1,5 @@
 <p align="center">
-  <img src="preview.png" alt="INTI Virtual Tour Preview" width="800"/>
-</p>
-
-<p align="center">
-  <a href="https://chong-kai-juan03.github.io/unity-virtual-tour/">
+  <a href="https://chong-kai-juan03.github.io/Unity-INTI-Virtual-Tour-Webgl-Hosting-Files/">
     <img src="https://img.shields.io/badge/View%20Live%20Tour-Click%20Here-brightgreen?style=for-the-badge" alt="View Live Tour"/>
   </a>
 </p>
