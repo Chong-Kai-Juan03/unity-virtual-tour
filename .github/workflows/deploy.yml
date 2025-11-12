@@ -1,4 +1,4 @@
-name: Deploy Unity WebGL to GitHub Pages (with Firebase config)
+name: Deploy Unity WebGL to GitHub Pages (with Firebase config + LFS)
 
 on:
   push:
@@ -17,10 +17,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout repository
+      #  Step 1: Checkout repo including Git LFS files
+      - name: Checkout repository (with LFS)
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
-      # Generate firebase-config.js dynamically from GitHub secrets
+      #  Step 2: Generate firebase-config.js dynamically from secrets
       - name: Generate firebase-config.js
         run: |
           echo "Creating firebase-config.js..."
@@ -37,14 +40,13 @@ jobs:
           EOF
           echo "firebase-config.js created successfully."
 
-      # Upload artifacts for GitHub Pages
+      #  Step 3: Upload all site files (including Unity Build) as artifact
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
-      # Deploy to GitHub Pages
+      #  Step 4: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
