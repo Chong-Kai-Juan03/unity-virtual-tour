@@ -1,7 +1,7 @@
 # 🏫 INTI Virtual Tour (Unity WebGL Build)
 
 ### 🧩 Source Code
-For the full Unity project (scenes, C# scripts, and Unity assets), please visit:  
+To view the **complete Unity source project**, visit:   
 🔗 **[INTI Virtual Tour – Main Source Repository](https://github.com/Chong-Kai-Juan03/inti-virtual-hub)**
 
 ### 🎮 Overview
@@ -72,9 +72,11 @@ Bachelor of Science (Hons) in Computer Science
 ---
 
 ### 📎 Related Project
-To view the **complete Unity source project**, visit:  
-🔗 [https://github.com/Chong-Kai-Juan03/inti-virtual-hub](https://github.com/Chong-Kai-Juan03/inti-virtual-hub)
+To view the **Original Unity INTI Virtual Tour source project**, visit:  
+🔗 [https://github.com/tgy0717/VR-Project-IntiPenang](https://github.com/tgy0717/VR-Project-IntiPenang)
 
+To view the **INTI Virtual Hub source project**, visit:  
+🔗 [https://github.com/Chong-Kai-Juan03/ASP.NET-INTI-Virtual-Hub-Website](https://github.com/Chong-Kai-Juan03/ASP.NET-INTI-Virtual-Hub-Website)
 ---
 
 <p align="center">
