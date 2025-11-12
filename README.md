@@ -33,7 +33,7 @@ They are optimized for hosting on **GitHub Pages**, allowing anyone to experienc
 ### 🌐 Live Demo
 
 Experience the virtual tour online here:  
-🔗 **[https://chong-kai-juan03.github.io/unity-virtual-tour/](https://chong-kai-juan03.github.io/unity-virtual-tour/)**
+🔗 **[https://chong-kai-juan03.github.io/unity-virtual-tour/](https://chong-kai-juan03.github.io/Unity-INTI-Virtual-Tour-Webgl-Hosting-Files/)**
 
 ---
 
