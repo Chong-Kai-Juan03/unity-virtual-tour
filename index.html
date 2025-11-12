@@ -58,44 +58,80 @@
     <!-- Firebase compat SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-    <script src="./firebase-config.js"></script>
-    
-    <!-- Load Unity loader BEFORE calling createUnityInstance -->
-    <script src="./Build/unity-virtual-tour.loader.js"></script>
-    
+    <!-- Optional: App Check (recommended) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check-compat.js"></script>
+
+    <!-- Load config that will be created at deploy time -->
+    <script src="firebase-config.js"></script>
+
+
     <script>
-    window.addEventListener('load', async function () {
-        console.log("Page loaded, initializing Unity and Firebase...");
-    
-        // -------- Firebase already initialized from firebase-config.js -------- //
-    
-        // If a building has no levels, use this value
-        const LEVEL_FOR_BUILDINGS_WITHOUT_LEVELS = "N/A";
-    
-        // Flatten and normalize Firebase data
-        function normalizeScenes(root) {
-            const out = [];
-            if (!root || typeof root !== "object") return out;
-    
-            for (const building of Object.keys(root)) {
-                const bObj = root[building];
-                if (!bObj || typeof bObj !== "object") continue;
-    
-                const childKeys = Object.keys(bObj);
-                if (childKeys.length === 0) continue;
-    
-                const firstChild = bObj[childKeys[0]];
-                const hasLevels = firstChild && typeof firstChild === "object" &&
-                    !("SceneTitle" in firstChild) && !("ImageUrl" in firstChild);
-    
-                if (hasLevels) {
-                    // Buildings with levels
-                    for (const levelName of childKeys) {
-                        const levelObj = bObj[levelName];
-                        if (!levelObj || typeof levelObj !== "object") continue;
-    
-                        for (const itemKey of Object.keys(levelObj)) {
-                            const item = levelObj[itemKey] || {};
+        document.addEventListener('DOMContentLoaded', function () {
+
+            //// 1) Read config injected by GitHub Actions
+            const cfg = (window && window.FIREBASE_CONFIG) || null;
+            if (!cfg) {
+               console.error('Missing Firebase config. Did deploy pipeline create firebase-config.js?');
+            } else {
+               try {
+                   firebase.initializeApp(cfg);
+                   console.log('Firebase initialized');
+
+                   // 2) (Optional) App Check — only activates if a site key is provided
+                   if (window.APP_CHECK_SITE_KEY) {
+                       firebase.appCheck().activate(window.APP_CHECK_SITE_KEY, /* isTokenAutoRefreshEnabled */ true);
+                       console.log('App Check activated');
+                   }
+               } catch (e) {
+                   console.error('Firebase init error:', e);
+               }
+            }
+
+
+            // If a building has no levels, use this value
+            const LEVEL_FOR_BUILDINGS_WITHOUT_LEVELS = "N/A";
+
+            // [{ Id, SceneTitle, S3Key, ImageUrl, Building, Level }, ...]
+            function normalizeScenes(root) {
+                const out = [];
+                if (!root || typeof root !== "object") return out;
+
+                for (const building of Object.keys(root)) {
+                    const bObj = root[building];
+                    if (!bObj || typeof bObj !== "object") continue;
+
+                    const childKeys = Object.keys(bObj);
+                    if (childKeys.length === 0) continue;
+
+                    const firstChild = bObj[childKeys[0]];
+                    const hasLevels = firstChild && typeof firstChild === "object" &&
+                        !("SceneTitle" in firstChild) && !("ImageUrl" in firstChild);
+
+                    if (hasLevels) {
+                        // Buildings with levels (e.g., Inti-Penang)
+                        for (const levelName of childKeys) {
+                            const levelObj = bObj[levelName];
+                            if (!levelObj || typeof levelObj !== "object") continue;
+
+                            for (const itemKey of Object.keys(levelObj)) {
+                                const item = levelObj[itemKey] || {};
+                                const t = item.SceneTitle, k = item.S3Key, u = item.ImageUrl;
+                                if (k && u) {
+                                    out.push({
+                                        Id: String(itemKey),
+                                        SceneTitle: t ? String(t) : "",
+                                        S3Key: String(k),
+                                        ImageUrl: String(u),
+                                        Building: String(building),
+                                        Level: String(levelName)
+                                    });
+                                }
+                            }
+                        }
+                    } else {
+                        // Buildings without levels (e.g., USAINS)
+                        for (const itemKey of childKeys) {
+                            const item = bObj[itemKey] || {};
                             const t = item.SceneTitle, k = item.S3Key, u = item.ImageUrl;
                             if (k && u) {
                                 out.push({
@@ -104,143 +140,123 @@
                                     S3Key: String(k),
                                     ImageUrl: String(u),
                                     Building: String(building),
-                                    Level: String(levelName)
+                                    Level: ""
                                 });
                             }
                         }
                     }
-                } else {
-                    // Buildings without levels
-                    for (const itemKey of childKeys) {
-                        const item = bObj[itemKey] || {};
-                        const t = item.SceneTitle, k = item.S3Key, u = item.ImageUrl;
-                        if (k && u) {
-                            out.push({
-                                Id: String(itemKey),
-                                SceneTitle: t ? String(t) : "",
-                                S3Key: String(k),
-                                ImageUrl: String(u),
-                                Building: String(building),
-                                Level: ""
-                            });
-                        }
-                    }
                 }
+
+                // Optional: sort
+                out.sort((a, b) =>
+                    (a.Building || "").localeCompare(b.Building || "") ||
+                    (a.Level || "").localeCompare(b.Level || "") ||
+                    (a.SceneTitle || "").localeCompare(b.SceneTitle || "")
+                );
+
+                console.log("[index] Flattened scenes:", out);
+                return out;
             }
-    
-            out.sort((a, b) =>
-                (a.Building || "").localeCompare(b.Building || "") ||
-                (a.Level || "").localeCompare(b.Level || "") ||
-                (a.SceneTitle || "").localeCompare(b.SceneTitle || "")
-            );
-    
-            console.log("[index] Flattened scenes:", out);
-            return out;
-        }
-    
-        async function fetchScenesArray() {
-            try {
-                const snap = await firebase.database().ref("Scenes").get();
-                if (!snap.exists()) {
-                    console.warn("No data found at 'Scenes' reference");
+
+            async function fetchScenesArray() {
+                try {
+                    const snap = await firebase.database().ref("Scenes").get();
+                    if (!snap.exists()) {
+                        console.warn("No data found at 'Scenes' reference");
+                        return [];
+                    }
+                    return normalizeScenes(snap.val());
+                } catch (err) {
+                    console.error("[index] Firebase read failed:", err);
                     return [];
                 }
-                return normalizeScenes(snap.val());
-            } catch (err) {
-                console.error("[index] Firebase read failed:", err);
-                return [];
             }
-        }
-    
-        function sendScenesToUnity(unityInstance, scenesArray) {
-            try {
-                const payload = JSON.stringify(scenesArray);
-                console.log("[index] Sending payload to Unity:", payload);
-                unityInstance.SendMessage("FirebaseBridge", "OnPreloadDataReceived", payload);
-            } catch (err) {
-                console.error("[index] SendMessage failed:", err);
-            }
-        }
-    
-        // -------- Unity Setup -------- //
-        const container = document.querySelector("#unity-container");
-        const canvas = document.querySelector("#unity-canvas");
-        const loadingBar = document.querySelector("#unity-loading-bar");
-        const progressBarFull = document.querySelector("#unity-progress-bar-full");
-        const fullscreenButton = document.querySelector("#unity-fullscreen-button");
-        const warningBanner = document.querySelector("#unity-warning");
-    
-        function unityShowBanner(msg, type) {
-            function updateBannerVisibility() {
-                warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-            }
-            const div = document.createElement('div');
-            div.innerHTML = msg;
-            warningBanner.appendChild(div);
-            if (type === 'error') div.style = 'background: red; padding: 10px;';
-            else if (type === 'warning') {
-                div.style = 'background: yellow; padding: 10px;';
-                setTimeout(() => {
-                    warningBanner.removeChild(div);
-                    updateBannerVisibility();
-                }, 5000);
-            }
-            updateBannerVisibility();
-        }
-    
-        // Unity build configuration
-        const config = {
-            dataUrl: "./Build/unity-virtual-tour.data",
-            frameworkUrl: "./Build/unity-virtual-tour.framework.js",
-            codeUrl: "./Build/unity-virtual-tour.wasm",
-            streamingAssetsUrl: "StreamingAssets",
-            companyName: "INTI International College Penang",
-            productName: "INTI Virtual Tour",
-            productVersion: "0.1",
-            showBanner: unityShowBanner
-        };
-    
-        // Adjust for mobile
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            const meta = document.createElement('meta');
-            meta.name = 'viewport';
-            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-            document.head.appendChild(meta);
-            container.className = "unity-mobile";
-            canvas.className = "unity-mobile";
-            config.devicePixelRatio = 1;
-        }
-    
-        loadingBar.style.display = "block";
-    
-        // -------- Ensure loader is ready before calling Unity -------- //
-        if (typeof createUnityInstance !== "function") {
-            console.warn("Unity loader not ready yet, waiting...");
-            await new Promise(resolve => setTimeout(resolve, 500)); // short delay
-        }
-    
-        if (typeof createUnityInstance === "function") {
-            console.log("Unity loader ready, creating instance...");
-            createUnityInstance(canvas, config, (progress) => {
-                progressBarFull.style.width = (100 * progress) + "%";
-            }).then((unityInstance) => {
-                loadingBar.style.display = "none";
-                if (fullscreenButton) {
-                    fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
+
+            // Send to Unity
+            function sendScenesToUnity(unityInstance, scenesArray) {
+                try {
+                    const payload = JSON.stringify(scenesArray);
+                    console.log("[index] Sending payload to Unity:", payload);
+                    unityInstance.SendMessage("FirebaseBridge", "OnPreloadDataReceived", payload);
+                } catch (err) {
+                    console.error("[index] SendMessage failed:", err);
                 }
-    
-                fetchScenesArray().then((scenes) => {
-                    sendScenesToUnity(unityInstance, scenes);
+            }
+
+            var container = document.querySelector("#unity-container");
+            var canvas = document.querySelector("#unity-canvas");
+            var loadingBar = document.querySelector("#unity-loading-bar");
+            var progressBarFull = document.querySelector("#unity-progress-bar-full");
+            var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+            var warningBanner = document.querySelector("#unity-warning");
+
+            function unityShowBanner(msg, type) {
+                function updateBannerVisibility() {
+                    warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+                }
+                var div = document.createElement('div');
+                div.innerHTML = msg;
+                warningBanner.appendChild(div);
+                if (type == 'error') div.style = 'background: red; padding: 10px;';
+                else {
+                    if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+                    setTimeout(function () {
+                        warningBanner.removeChild(div);
+                        updateBannerVisibility();
+                    }, 5000);
+                }
+                updateBannerVisibility();
+            }
+
+            var buildUrl = "Build";
+            var loaderUrl = buildUrl + "/unity-virtual-tour.loader.js";
+            var config = {
+                dataUrl: buildUrl + "/unity-virtual-tour.data.gz",
+                frameworkUrl: buildUrl + "/unity-virtual-tour.framework.js.gz",
+                codeUrl: buildUrl + "/unity-virtual-tour.wasm.gz",
+                streamingAssetsUrl: "StreamingAssets",
+                companyName: "INTI College",
+                productName: "INTI Virtual Tour",
+                productVersion: "1.0",
+                devicePixelRatio: Math.min(1.5, window.devicePixelRatio || 1),
+            };
+
+            // Mobile meta + classes
+            if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                var meta = document.createElement('meta');
+                meta.name = 'viewport';
+                meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+                document.head.appendChild(meta);
+                container.className = "unity-mobile";
+                canvas.className = "unity-mobile";
+                config.devicePixelRatio = 1;
+            }
+
+            loadingBar.style.display = "block";
+
+            var script = document.createElement("script");
+            script.src = loaderUrl;
+            script.onload = () => {
+                createUnityInstance(canvas, config, (progress) => {
+                    progressBarFull.style.width = (100 * progress) + "%";
+                }).then((unityInstance) => {
+                    loadingBar.style.display = "none";
+                    if (fullscreenButton) {
+                        fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
+                    }
+
+                    fetchScenesArray().then(scenes => {
+                        sendScenesToUnity(unityInstance, scenes);
+                    });
+
+                    window.addEventListener("resize", () => {
+                    });
+                }).catch((message) => {
+                    alert(message);
                 });
-            }).catch((message) => {
-                console.error("Unity failed to start:", message);
-            });
-        } else {
-            console.error("createUnityInstance still undefined — loader may not have loaded correctly.");
-        }
-    });
+            };
+            document.body.appendChild(script);
+        });
     </script>
-
-
 </body>
 </html>
