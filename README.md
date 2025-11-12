@@ -2,7 +2,7 @@
 
 ### 🧩 Source Code
 To view the **complete Unity source project**, visit:   
-🔗 **[INTI Virtual Tour – Main Source Repository](https://github.com/Chong-Kai-Juan03/inti-virtual-hub)**
+🔗 **[INTI Virtual Tour – Main Source Repository](https://github.com/Chong-Kai-Juan03/Enhanced-VR-Project-IntiPenang.)**
 
 ### 🎮 Overview
 This repository contains the **Unity WebGL build files** for the **INTI International College Penang Virtual Tour** project.  
