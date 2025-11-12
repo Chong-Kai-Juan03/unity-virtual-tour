@@ -1,10 +1,8 @@
-<p align="center">
-  <a href="https://chong-kai-juan03.github.io/Unity-INTI-Virtual-Tour-Webgl-Hosting-Files/">
-    <img src="https://img.shields.io/badge/View%20Live%20Tour-Click%20Here-brightgreen?style=for-the-badge" alt="View Live Tour"/>
-  </a>
-</p>
-
 # 🏫 INTI Virtual Tour (Unity WebGL Build)
+
+### 🧩 Source Code
+For the full Unity project (scenes, C# scripts, and Unity assets), please visit:  
+🔗 **[INTI Virtual Tour – Main Source Repository](https://github.com/Chong-Kai-Juan03/inti-virtual-hub)**
 
 ### 🎮 Overview
 This repository contains the **Unity WebGL build files** for the **INTI International College Penang Virtual Tour** project.  
@@ -12,6 +10,12 @@ The build allows visitors to explore the INTI campus through an interactive 360�
 
 These files are **compiled output** from the Unity project (not editable source files).  
 They are optimized for hosting on **GitHub Pages**, allowing anyone to experience the virtual tour directly in their browser.
+
+<p align="center">
+  <a href="https://chong-kai-juan03.github.io/Unity-INTI-Virtual-Tour-Webgl-Hosting-Files/">
+    <img src="https://img.shields.io/badge/View%20Live%20Tour-Click%20Here-brightgreen?style=for-the-badge" alt="View Live Tour"/>
+  </a>
+</p>
 
 ---
 
